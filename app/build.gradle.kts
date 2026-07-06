@@ -5,6 +5,10 @@ plugins {
     id("ru.khubulty.cloudgallery.release")
 }
 
+publishReleaseApk{
+    repoDirectoryName = "myReleaseApkDirectory"
+}
+
 android {
     namespace = "ru.khubulty.cloudgallery"
     compileSdk {
