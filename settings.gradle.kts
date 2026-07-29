@@ -1,3 +1,6 @@
+include(":core:ui")
+
+
 pluginManagement {
     repositories {
         google {
@@ -22,6 +25,15 @@ dependencyResolutionManagement {
     }
 }
 
+enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
+
 rootProject.name = "CloudGallery"
 include(":app")
- 
+
+include(":features:login:login-impl")
+include(":features:login:login-api")
+include(":network:network-impl")
+include(":network:network-api")
+include(":core:ui")
+include(":core:navigation:navigation-api")
+include(":core:navigation:navigation-impl")

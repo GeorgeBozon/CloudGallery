@@ -4,49 +4,68 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import ru.khubulty.cloudgallery.data.UsersRepository
-import ru.khubulty.cloudgallery.domain.UserDomain
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation3.runtime.entryProvider
+import androidx.navigation3.ui.NavDisplay
+import dagger.hilt.android.AndroidEntryPoint
+import ru.khubulty.authApi.LoginDestination
 import ru.khubulty.cloudgallery.ui.theme.CloudGalleryTheme
+import ru.khubulty.navigationApi.EntryProviderInstaller
+import ru.khubulty.navigationApi.Navigator
+
+import ru.khubulty.networkApi.data.AuthApi
+import ru.khubulty.networkApi.domain.SessionState
 import javax.inject.Inject
 
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     @Inject
-    lateinit var repo: UsersRepository
+    lateinit var navigator: Navigator
+
+    @Inject
+    lateinit var entryBuilders: Set<@JvmSuppressWildcards EntryProviderInstaller>
+
+    @Inject
+    lateinit var authApi: AuthApi
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        application.component().inject(this)
 
         setContent {
             CloudGalleryTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    val users = remember { mutableStateListOf<UserDomain>() }
-
-                    LaunchedEffect(Unit) {
-                        val data = repo.getUsers()
-                        users.addAll(data)
-                    }
-                    Box(Modifier
-                        .padding(innerPadding)
-                        .fillMaxSize()) {
-                        Text(
-                            modifier = Modifier.align(Alignment.Center),
-                            text = users.firstOrNull()?.name ?: "Hello"
-                        )
-                    }
-                }
+                NavContent(authApi = authApi, navigator = navigator, entryBuilders = entryBuilders)
             }
         }
     }
+}
+
+@Composable
+private fun NavContent(authApi: AuthApi, navigator: Navigator, entryBuilders: Set<EntryProviderInstaller>) {
+
+    val sessionState by
+    authApi.getSessionProvider().collectAsStateWithLifecycle(SessionState.Loading)
+
+    LaunchedEffect(sessionState) {
+        when (sessionState) {
+            SessionState.NotAuthenticated -> navigator.replaceAll(LoginDestination.WelcomeScreen)
+            else -> Unit
+
+        }
+    }
+
+    NavDisplay(
+        modifier = Modifier.fillMaxSize(),
+        onBack = navigator::goBack,
+        backStack = navigator.backStack,
+        entryProvider = entryProvider {
+           entryBuilders.forEach { builder ->
+               this.builder(navigator)
+           }
+        })
 }
